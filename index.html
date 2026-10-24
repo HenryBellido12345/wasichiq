@@ -421,6 +421,9 @@
 .vch-n{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#F1EEE6;color:var(--muted);font-variant-numeric:tabular-nums}
 .vch[aria-pressed="true"]{background:var(--inst);border-color:var(--inst);color:#fff}
 .vch[aria-pressed="true"] .vch-n{background:rgba(255,255,255,.22);color:#fff}
+.vsec-tipo .vchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.vsec-tipo .vch{width:100%;justify-content:space-between;text-align:left;border-radius:10px;padding:9px 12px;min-height:40px}
+.vsec-tipo .vch-n{flex:none;min-width:30px;text-align:center}
 </style>
 </head>
 <body>
@@ -2880,8 +2883,8 @@ function pintarBandeja(cn,rows){
     ${[...Object.entries(RUBROS),['todo','Todo']].map(([k,l])=>{ const [c,s]=RUB_COL[k], on=vRubro===k, n=k==='todo'?nRub:(R[k]||0);
       return `<button type="button" class="vrt" data-vrubro="${k}" aria-pressed="${on}" style="--c:${c};--s:${s}"><span class="vrt-i"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUB_ICO[k]}</svg></span><span class="vrt-x"><span class="vrt-l">${l}</span><span class="vrt-n">${n.toLocaleString('en-US')}</span></span></button>`; }).join('')}</div></div>`;
   const tipoBar=vRubro!=='consultoria'?'':`<div class="vsec vsec-tipo"><div class="vsec-h"><span class="vsec-t">Tipo de consultoría</span><span class="sub" style="font-size:11.5px">Puedes marcar varios</span></div><div class="vchips">
-    <button class="vch" type="button" data-vtipo="" aria-pressed="${!vTipos.size}">Todos</button>${
-    [...VTIPOS.map(x=>[x[0],x[1]]),VTIPO_OTRO].map(([k,l])=>`<button class="vch" type="button" data-vtipo="${k}" aria-pressed="${vTipos.has(k)}">${l} <span class="vch-n">${T[k]||0}</span></button>`).join('')}</div></div>`;
+    <button class="vch" type="button" data-vtipo="" aria-pressed="${!vTipos.size}">Todos <span class="vch-n">${(R.consultoria||0).toLocaleString('en-US')}</span></button>${
+    [...VTIPOS.map(x=>[x[0],x[1]]),VTIPO_OTRO].map(([k,l])=>`<button class="vch" type="button" data-vtipo="${k}" aria-pressed="${vTipos.has(k)}">${l} <span class="vch-n">${(T[k]||0).toLocaleString('en-US')}</span></button>`).join('')}</div></div>`;
   const ordBar=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex-basis:100%;border-top:1px solid var(--hair);padding-top:10px">
     <a href="#" data-seaceayuda class="sub" style="font-size:11.5px;color:var(--inst)">¿Cómo abrir la convocatoria en el SEACE?</a>
     <label class="exp-lbl" for="vord" style="margin-left:auto">Ordenar por</label><select class="sl" id="vord" style="width:auto">${[['pub','Más recientes'],['cierre','Plazo por cerrar'],['valor','Mayor valor referencial']].map(([k,l])=>`<option value="${k}"${k===vOrd?' selected':''}>${l}</option>`).join('')}</select></div>`;
