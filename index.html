@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestor de consultorías · Ingresos, egresos e impuestos · Perú</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2300684F'/%3E%3Ccircle cx='49' cy='15' r='5.5' fill='%23E07020'/%3E%3Cpath d='M32 11.5 7.5 31.5l3.3 4L15 32v22h34V32l4.2 3.5 3.3-4z' fill='%23fff'/%3E%3Cpath d='M24 34h4v-3.5h3V27h2v3.5h3V34h4v3H24z' fill='%23E07020'/%3E%3Cpath d='M27.5 54v-9a4.5 4.5 0 0 1 9 0v9z' fill='%2300684F'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2670,12 +2671,12 @@ function vigiaAyuda(){ let box=el('vigiaBox'); if(!box){ box=document.createElem
   box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><b style="color:var(--gold)">Actualizar la bandeja con el Vigía</b><button class="del" type="button" data-cerrar aria-label="Cerrar">×</button></div>
     <div style="margin:6px 0">El OECE y el SEACE solo entregan sus datos desde sus propias páginas; por eso el Vigía se corre allí, con un marcador.</div>
     <div style="margin:6px 0"><b>Una sola vez:</b> arrastra este botón a la barra de marcadores de Chrome (si no la ves: Ctrl + Mayús + B).</div>
-    <div style="text-align:center;margin:8px 0"><a href="${esc(VIGIA_BM)}" onclick="event.preventDefault();alert('Arrástralo a la barra de marcadores; no lo pulses aquí.')" style="display:inline-block;padding:8px 14px;border-radius:8px;background:var(--inst);color:#fff;font-weight:700;text-decoration:none;cursor:grab">Vigía Wasichiq</a></div>
+    <div style="text-align:center;margin:8px 0"><a href="${esc(VIGIA_BM)}" onclick="event.preventDefault();alert('Arrástralo a la barra de marcadores; no lo pulses aquí.')" style="display:inline-block;padding:8px 14px;border-radius:8px;background:var(--inst);color:#fff;font-weight:700;text-decoration:none;cursor:grab">📡 Vigía Wasichiq</a></div>
     <details style="margin:0 0 8px"><summary style="cursor:pointer;color:var(--inst)">Si arrastrar no funciona: crearlo a mano</summary>
       <ol style="margin:6px 0 0;padding-left:18px">
         <li><button class="tbtn" type="button" data-vbmcopy>Copiar código del marcador</button></li>
         <li>Clic derecho en la barra de marcadores → <b>Agregar página…</b></li>
-        <li>Nombre: <b>Vigía Wasichiq</b>. En <b>URL</b> borra lo que haya y pega con Ctrl + V.</li>
+        <li>Nombre: <b>📡 Vigía Wasichiq</b>. En <b>URL</b> borra lo que haya y pega con Ctrl + V.</li>
         <li>Pulsa <b>Guardar</b>.</li></ol></details>
     <div><b>Cada vez:</b></div>
     <ol style="margin:4px 0 0;padding-left:18px">
@@ -2690,12 +2691,12 @@ function seaceAyuda(href){ let box=el('seaceBox'); if(!box){ box=document.create
       const c=e.target.closest('[data-bmcopy]'); if(c){ const ok=()=>{ c.textContent='Código copiado ✓'; }; try{ navigator.clipboard.writeText(SEACE_BM).then(ok,()=>{ const t=document.createElement('textarea'); t.value=SEACE_BM; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); ok(); }); }catch(_){ } } }); }
   box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><b style="color:var(--inst)">Abrir la convocatoria en el SEACE</b><button class="del" type="button" data-cerrar aria-label="Cerrar">×</button></div>
     <div style="margin:6px 0"><b>Una sola vez:</b> arrastra este botón a la barra de marcadores de Chrome (si no la ves: Ctrl + Mayús + B).</div>
-    <div style="text-align:center;margin:8px 0"><a href="${esc(SEACE_BM)}" onclick="event.preventDefault();alert('Arrástralo a la barra de marcadores; no lo pulses aquí.')" style="display:inline-block;padding:8px 14px;border-radius:8px;background:var(--gold);color:#fff;font-weight:700;text-decoration:none;cursor:grab">Wasichiq → SEACE</a></div>
+    <div style="text-align:center;margin:8px 0"><a href="${esc(SEACE_BM)}" onclick="event.preventDefault();alert('Arrástralo a la barra de marcadores; no lo pulses aquí.')" style="display:inline-block;padding:8px 14px;border-radius:8px;background:var(--gold);color:#fff;font-weight:700;text-decoration:none;cursor:grab">🔎 Wasichiq → SEACE</a></div>
     <details style="margin:0 0 8px"><summary style="cursor:pointer;color:var(--inst)">Si arrastrar no funciona: crearlo a mano</summary>
       <ol style="margin:6px 0 0;padding-left:18px">
         <li><button class="tbtn" type="button" data-bmcopy>Copiar código del marcador</button></li>
         <li>Clic derecho en la barra de marcadores → <b>Agregar página…</b></li>
-        <li>Nombre: <b>Wasichiq → SEACE</b>. En <b>URL</b> borra lo que haya y pega con Ctrl + V.</li>
+        <li>Nombre: <b>🔎 Wasichiq → SEACE</b>. En <b>URL</b> borra lo que haya y pega con Ctrl + V.</li>
         <li>Pulsa <b>Guardar</b>.</li></ol></details>
     <div><b>Cada vez:</b> pulsa «SEACE ↗» en la convocatoria; en la pestaña del SEACE pulsa el marcador <b>Wasichiq → SEACE</b>, luego <b>Buscar</b> y el ícono de la ficha. El marcador llena el «Identificador Convocatoria», que lleva justo a ese proceso.</div>
     <div style="margin-top:6px;color:var(--muted)">Sin pasar por el SEACE: botón <b>OECE ↗</b>, con la misma información y sin captcha.</div>
