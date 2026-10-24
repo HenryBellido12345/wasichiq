@@ -2736,7 +2736,8 @@ function vigNorm(d){
       entidad:s(x.entidad),region:s(x.region),valor:+x.valor||0,metodo:s(x.metodo),fechaPub:s(x.fechaPub).slice(0,10),
       registroHasta:s(x.registroHasta).slice(0,10),consultasDesde:s(x.consultasDesde).slice(0,10),consultasHasta:s(x.consultasHasta).slice(0,10),
       cotizDesde:s(x.cotizDesde).slice(0,10),cotizHasta:s(x.cotizHasta).slice(0,10),bases:s(x.bases),visto:s(x.visto)})),
-    actualizado:s(d.actualizado), desde:s(d.desde), migrado:!!d.migrado, _updated:+d._updated||0 };
+    actualizado:s(d.actualizado), desde:s(d.desde), migrado:!!d.migrado, _updated:+d._updated||0,
+    fuentes:{oece:s((d.fuentes||{}).oece)||(d.fuentes?'':s(d.actualizado)), cm:s((d.fuentes||{}).cm)} };
 }
 /* ---------- Bandeja en la tabla wasichiq_convocatorias (una fila por convocatoria) ----------
    Consultorías, obras y servicios. La búsqueda, los filtros, el orden y los conteos los hacen las funciones vig_* del
@@ -2811,12 +2812,24 @@ async function vigPull(){ const c=sbCfg(); if(!c||!authGet()) return;
     const r=await fetch(c.url+'/rest/v1/'+VIG_TABLE+'?id=eq.1&select=data,updated',{headers:h}); if(!r.ok) throw 0;
     const rows=await r.json(); if(rows&&rows[0]&&(rows[0].updated||0)>(vig._updated||0)){ vig=vigNorm(rows[0].data); vig._updated=rows[0].updated;
       if(!vig.migrado&&vig.items.length) await vigMigrar();
-      if(!el('modLic').classList.contains('hidden')&&lView==='bandeja'&&!lOpen) renderLList(); } }catch(e){} }
+      if(!el('modLic').classList.contains('hidden')&&lView==='bandeja'&&!lOpen) renderLList();
+      if(!el('modHome').classList.contains('hidden')) renderVenc(); } }catch(e){} }
 async function vigPush(){ const c=sbCfg(); if(!c||!authGet()) throw new Error('sin sesión');
   const ts=Date.now(); vig._updated=ts;
   const r=await fetch(c.url+'/rest/v1/'+VIG_TABLE+'?on_conflict=id',{method:'POST',headers:await sbH(c,{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'}),
-    body:JSON.stringify([{id:1,data:{actualizado:vig.actualizado,desde:vig.desde,migrado:!!vig.migrado,items:[]},updated:ts}])});
+    body:JSON.stringify([{id:1,data:{actualizado:vig.actualizado,desde:vig.desde,migrado:!!vig.migrado,fuentes:vig.fuentes||{},items:[]},updated:ts}])});
   if(!r.ok) throw new Error('HTTP '+r.status); }
+/* Frescura de cada fuente del Vigía: al día si se actualizó hoy; aviso si fue ayer; alerta si es más antiguo o nunca */
+const VIG_FUENTES=[['oece','Concursos (OECE)'],['cm','Contratos menores (SEACE)']];
+function vigEstadoFuentes(){ const hoy=today(), F=vig.fuentes||{};
+  return VIG_FUENTES.map(([k,lbl])=>{ const ts=F[k]?new Date(F[k]):null, d=ts&&!isNaN(ts)?parseD(ts.toLocaleDateString('en-CA')):null, n=d?daysB(d,hoy):null;
+    const nivel=n===null?'bad':n<=0?'ok':n===1?'warn':'bad';
+    const cuando=!ts?'sin actualizar todavía':n<=0?'hoy, '+ts.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}):n===1?'ayer, '+ts.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}):'hace '+n+' días ('+ts.toLocaleDateString('es-PE',{day:'2-digit',month:'short'})+')';
+    return {k,lbl,ts,n,nivel,cuando}; }); }
+function vigFuentesHTML(){ const E=vigEstadoFuentes(), col={ok:'var(--green)',warn:'var(--gold)',bad:'var(--red)'}, ico={ok:'✓',warn:'!',bad:'!'};
+  const malas=E.filter(e=>e.nivel!=='ok');
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${E.map(e=>`<span title="Última actualización con el Vigía" style="display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;border:1px solid color-mix(in srgb,${col[e.nivel]} 40%,var(--hair));background:color-mix(in srgb,${col[e.nivel]} 9%,#fff);font-size:12.5px"><span style="display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:${col[e.nivel]};color:#fff;font-size:11px;font-weight:700">${ico[e.nivel]}</span><b>${e.lbl}</b><span style="color:var(--muted)">${e.cuando}</span></span>`).join('')}</div>${
+    malas.length?`<div role="alert" style="margin-top:8px;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,var(--gold) 12%,#fff);border:1px solid color-mix(in srgb,var(--gold) 35%,var(--hair));font-size:12.5px">⚠ <b>La bandeja no está al día:</b> ${malas.map(e=>e.lbl+' '+(e.ts?'actualizados '+e.cuando:'sin actualizar todavía')).join('; ')}. Pulsa <b>↻ Actualizar con el Vigía</b>.</div>`:''}`; }
 /* Importa lo que manda el colector: alta/actualización por lotes y limpieza de lo vencido */
 async function vigImport(items,meta,opc){ opc=opc||{};
   const filas=(items||[]).filter(x=>x&&x.ocid).map(vigAFila); let nuevos=0;
@@ -2824,7 +2837,9 @@ async function vigImport(items,meta,opc){ opc=opc||{};
   const lim=new Date(Date.now()-VIG_DIAS*864e5).toISOString().slice(0,10);
   const keep=[...new Set([...(lic.interesantes||[]),...lic.procesos.map(p=>p.ocid).filter(Boolean)])];
   try{ await vigApi.podar({p_lim:lim,p_hoy:todayISO(),p_keep:keep}); }catch(e){}
-  if(!opc.migracion){ vig.actualizado=new Date().toISOString(); vig.desde=(meta&&meta.desde)||vig.desde||''; }
+  if(!opc.migracion){ vig.actualizado=new Date().toISOString(); vig.desde=(meta&&meta.desde)||vig.desde||'';
+    const k=/contratos menores/i.test((meta&&meta.fuente)||'')||(items||[]).some(x=>x&&esCM(x.ocid))?'cm':'oece';
+    vig.fuentes={...(vig.fuentes||{}),[k]:vig.actualizado}; }
   vig.items=[]; vig.migrado=true; try{ await vigPush(); }catch(e){}
   vigCache.clear(); vigNoHay.clear();
   let total=filas.length; try{ total=(await vigApi.conteos(vigParams())).en_bandeja; }catch(e){}
@@ -2889,7 +2904,7 @@ function pintarBandeja(cn,rows){
     <a href="#" data-seaceayuda class="sub" style="font-size:11.5px;color:var(--inst)">¿Cómo abrir la convocatoria en el SEACE?</a>
     <label class="exp-lbl" for="vord" style="margin-left:auto">Ordenar por</label><select class="sl" id="vord" style="width:auto">${[['pub','Más recientes'],['cierre','Plazo por cerrar'],['valor','Mayor valor referencial']].map(([k,l])=>`<option value="${k}"${k===vOrd?' selected':''}>${l}</option>`).join('')}</select></div>`;
   const head=`<div class="panel"><div class="panel-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-    <div style="font-size:13px">${vig.actualizado?`Última búsqueda: <b>${new Date(vig.actualizado).toLocaleString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</b> · ${(cn.en_bandeja||0).toLocaleString('en-US')} convocatorias en la bandeja (consultorías, obras y servicios de los últimos ${VIG_DIAS} días) · fuentes: OECE (Contrataciones Abiertas) y SEACE (contratos menores)`:'El Vigía todavía no ha hecho ninguna búsqueda.'}</div><button class="tbtn" type="button" data-vigiaayuda style="background:var(--gold);color:#fff;border-color:var(--gold);flex:none">↻ Actualizar con el Vigía</button>
+    <div style="font-size:13px;flex:1 1 520px">${vigFuentesHTML()}<div style="margin-top:6px;color:var(--muted);font-size:12px">${(cn.en_bandeja||0).toLocaleString('en-US')} convocatorias en la bandeja (consultorías, obras y servicios de los últimos ${VIG_DIAS} días)</div></div><button class="tbtn" type="button" data-vigiaayuda style="background:var(--gold);color:#fff;border-color:var(--gold);flex:none">↻ Actualizar con el Vigía</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="mfil" type="button" data-vab="1" aria-pressed="${vAb}" title="Concursos con consultas abiertas y contratos menores con cotización abierta">Plazo abierto (${cn.abiertas||0})</button><button class="mfil" type="button" data-vab="0" aria-pressed="${!vAb}">Todas (${cn.total||0})</button>
     <button class="mfil" type="button" data-vint aria-pressed="${vInt}" title="Solo las que marcaste con la estrella" style="${vInt?'':'color:var(--gold);border-color:var(--gold)'}">★ Interesantes (${cn.interesantes||0})</button>
     <span style="width:1px;background:var(--hair);margin:0 4px"></span><button class="mfil" type="button" data-vrel="0" aria-pressed="${!vRel}">Cualquier especialidad</button>
@@ -3024,14 +3039,16 @@ function renderVenc(){
   exp.profesionales.forEach(p=>{ const d=parseD(p.habilHasta); if(d&&d<=addDays(hoy,30)) it.push({d,mod:'②',col:'var(--green)',txt:'Habilitación de '+(p.nombre||'profesional'),go:'experiencia',venc:d<hoy}); });
   emp.docs.forEach(x=>{ const v=docVence(x); if(v&&v.d<=addDays(hoy,30)) it.push({d:v.d,mod:'⑤',col:'var(--slate)',txt:(x.nombre||x.tipo),go:'empresa',venc:v.d<hoy}); });
   it.sort((a,b)=>a.d-b.d);
-  if(!it.length){ box.innerHTML='<div class="xempty" style="padding:6px">No hay vencimientos en los próximos 14 días.</div>'; return; }
-  box.innerHTML=it.slice(0,12).map(x=>{ const n=daysB(hoy,x.d);
+  const malas=vig._updated?vigEstadoFuentes().filter(e=>e.nivel!=='ok'):[], aviso=malas.length?`<div class="venc" role="alert"><span class="vd" style="color:var(--gold)">Vigía</span><span class="vm" style="background:#EEF1F0;color:var(--gold)">⚠</span><span>Bandeja sin actualizar: ${esc(malas.map(e=>e.lbl+' ('+e.cuando+')').join(' · '))}</span><button type="button" data-hgo="vigia">Actualizar →</button></div>`:'';
+  if(!it.length){ box.innerHTML=aviso+'<div class="xempty" style="padding:6px">No hay vencimientos en los próximos 14 días.</div>'; return; }
+  box.innerHTML=aviso+it.slice(0,12).map(x=>{ const n=daysB(hoy,x.d);
     return `<div class="venc"><span class="vd" style="color:${x.venc?'var(--red)':n<=3?'var(--red)':'var(--ink)'}">${fmtDO(x.d)} · ${x.venc?'vencido':n===0?'hoy':'en '+n+' d'}</span>
       <span class="vm" style="background:#EEF1F0;color:${x.col}">${x.mod}</span><span>${esc(x.txt)}</span>
       <button type="button" data-hgo="${x.go}" ${x.id?`data-id="${esc(x.id)}"`:''}>Ver →</button></div>`; }).join('')+(it.length>12?`<div class="sub" style="font-size:12px;margin-top:6px">y ${it.length-12} más</div>`:'');
 }
 el('modHome').addEventListener('click',ev=>{ const b=ev.target.closest('[data-hgo]'); if(!b) return;
   if(b.dataset.hgo==='lic'){ lOpen=b.dataset.id; location.hash='licitaciones'; }
+  else if(b.dataset.hgo==='vigia'){ lOpen=null; lView='bandeja'; if(location.hash==='#licitaciones') renderLic(); else location.hash='licitaciones'; setTimeout(vigiaAyuda,300); }
   else if(b.dataset.hgo==='estrella'){ lOpen=null; lView='bandeja'; vInt=true; vAb=true; if(location.hash==='#licitaciones') renderLic(); else location.hash='licitaciones'; }
   else location.hash=b.dataset.hgo; });
 
