@@ -2719,7 +2719,11 @@ let vRubro='consultoria', vRegiones=new Set(), vRegAbierto=false;
 try{ JSON.parse(localStorage.getItem('wasichiq-vregiones')||'[]').forEach(r=>vRegiones.add(r)); }catch(e){}
 const vRegGuardar=()=>{ try{ localStorage.setItem('wasichiq-vregiones',JSON.stringify([...vRegiones])); }catch(e){} };
 const regNorm=s=>String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-const regBonito=s=>s?String(s).toLowerCase().replace(/(^|[\s(-])\S/g,m=>m.toUpperCase()):'Sin región';
+/* Las 25 regiones (departamentos) del Perú; el selector solo ofrece estas */
+const REG_PE=['AMAZONAS','ANCASH','APURIMAC','AREQUIPA','AYACUCHO','CAJAMARCA','CALLAO','CUSCO','HUANCAVELICA','HUANUCO','ICA','JUNIN','LA LIBERTAD','LAMBAYEQUE','LIMA','LORETO','MADRE DE DIOS','MOQUEGUA','PASCO','PIURA','PUNO','SAN MARTIN','TACNA','TUMBES','UCAYALI'];
+[...vRegiones].forEach(r=>{ if(!REG_PE.includes(r)) vRegiones.delete(r); });
+const REG_TILDE={'MADRE DE DIOS':'Madre de Dios',ANCASH:'Áncash',APURIMAC:'Apurímac',HUANUCO:'Huánuco',JUNIN:'Junín','SAN MARTIN':'San Martín'};
+const regBonito=s=>s?(REG_TILDE[s]||String(s).toLowerCase().replace(/(^|[\s(-])\S/g,m=>m.toUpperCase())):'Sin región';
 function vigDesdeFila(r){ const d=v=>v?String(v).slice(0,10):'';
   return {ocid:r.ocid,fuente:r.fuente||'',rubro:r.rubro||'consultoria',tipos:Array.isArray(r.tipos)?r.tipos:String(r.tipos||'').split(',').filter(Boolean),esp:r.esp||'',
     nomenclatura:r.nomenclatura||'',objeto:r.objeto||'',entidad:r.entidad||'',region:r.region||'',valor:+r.valor||0,metodo:r.metodo||'',fechaPub:d(r.fecha_pub),
@@ -2880,7 +2884,7 @@ function pintarBandeja(cn,rows){
     ${rows.length<n?`<div style="padding:10px 14px"><button class="addmini" type="button" data-vact="more">Mostrar más (${(n-rows.length).toLocaleString('en-US')} restantes)</button></div>`:''}</div>`;
 }
 /* Selector de regiones (departamentos), con conteo; se recuerda en este equipo y siempre se ve cuál está activo */
-function regionSel(G){ const lista=[...new Set([...Object.keys(G),...vRegiones])].sort((a,b)=>(a===''?1:b===''?-1:a.localeCompare(b)));
+function regionSel(G){ const lista=REG_PE;
   const lbl=vRegiones.size?(vRegiones.size<=3?[...vRegiones].map(regBonito).join(', '):vRegiones.size+' regiones'):'Todas';
   return `<div style="position:relative"><button class="vreg" type="button" data-vregbtn aria-expanded="${vRegAbierto}" aria-pressed="${vRegiones.size>0}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.3-6-11a6 6 0 0 1 12 0c0 5.7-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg> Región: <b>${esc(lbl)}</b> <span aria-hidden="true">▾</span></button>
     ${vRegAbierto?`<div style="position:absolute;z-index:50;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--hair);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;width:330px;max-height:360px;overflow:auto">
