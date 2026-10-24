@@ -392,6 +392,32 @@
 .vacc{display:flex;flex-direction:column;gap:4px;width:112px}
 .vacc .tbtn,.vacc a.tbtn{width:100%;box-sizing:border-box;justify-content:center;text-align:center;padding:5px 6px;font-size:12px;margin:0}
 .vacc .del{align-self:center}
+.vsec{flex-basis:100%;border-top:1px solid var(--hair);padding-top:12px}
+.vsec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.vsec-t{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.vrub{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.vrt{appearance:none;display:flex;align-items:center;gap:11px;text-align:left;padding:11px 14px;border:1.5px solid var(--hair);border-radius:14px;background:#fff;cursor:pointer;font:inherit;color:var(--ink);transition:border-color .15s,box-shadow .15s,transform .15s,background .15s}
+.vrt:hover{border-color:var(--c);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.vrt:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.vrt-i{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--s);color:var(--c)}
+.vrt-x{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.vrt-l{font-size:12.5px;font-weight:600;color:var(--muted)}
+.vrt-n{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.vrt[aria-pressed="true"]{border-color:var(--c);background:var(--s);box-shadow:inset 0 0 0 1px var(--c)}
+.vrt[aria-pressed="true"] .vrt-i{background:var(--c);color:#fff}
+.vrt[aria-pressed="true"] .vrt-l,.vrt[aria-pressed="true"] .vrt-n{color:var(--c)}
+.vreg{appearance:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--hair);border-radius:999px;background:#fff;font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer}
+.vreg b{font-weight:700}
+.vreg:hover{border-color:var(--inst)}
+.vreg[aria-pressed="true"]{background:var(--inst);border-color:var(--inst);color:#fff}
+.vsec-tipo{background:color-mix(in srgb,var(--inst-soft) 35%,#fff);border:1px solid color-mix(in srgb,var(--inst-soft) 80%,var(--hair));border-radius:14px;padding:11px 14px;margin-top:2px}
+.vsec-tipo .vsec-h{margin-bottom:8px}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}
+.vch{appearance:none;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border:1px solid var(--hair);border-radius:999px;background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer}
+.vch:hover{border-color:var(--inst);color:var(--inst)}
+.vch-n{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#F1EEE6;color:var(--muted);font-variant-numeric:tabular-nums}
+.vch[aria-pressed="true"]{background:var(--inst);border-color:var(--inst);color:#fff}
+.vch[aria-pressed="true"] .vch-n{background:rgba(255,255,255,.22);color:#fff}
 </style>
 </head>
 <body>
@@ -2813,17 +2839,18 @@ async function renderBandeja(){
   _vigPrimera=false; const rows=(filas||[]).map(vigDesdeFila); rows.forEach(x=>vigCache.set(x.ocid,x));
   pintarBandeja(cn||{},rows);
 }
+const RUB_ICO={"consultoria": "<path d=\"M7 3h7l4 4v14H7z\"/><path d=\"M14 3v4h4\"/><path d=\"M10 12h5M10 15h5M10 18h3\"/>", "obra": "<path d=\"M4 20h16\"/><path d=\"M6 20v-6a6 6 0 0 1 12 0v6\"/><path d=\"M12 8V5\"/><path d=\"M3 14h18\"/>", "servicio": "<path d=\"M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.6-.6-.6-2.6z\"/>", "todo": "<rect x=\"4\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"4\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/>"};
+const RUB_COL={consultoria:['var(--inst)','var(--inst-soft)'],obra:['var(--gold)','var(--gold-soft)'],servicio:['var(--slate)','var(--slate-soft)'],todo:['var(--ink)','#ECE8DE']};
 function pintarBandeja(cn,rows){
   const enF=new Map(lic.procesos.filter(p=>p.ocid).map(p=>[p.ocid,p.id])), mias=misEsp(), q=el('lq').value.trim();
   const rel=esp=>!!esp&&mias.some(m=>sameish(m,esp)), R=cn.rubros||{}, T=cn.tipos||{}, G=cn.regiones||{};
   const nRub=Object.values(R).reduce((a,b)=>a+b,0);
-  const rubBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-basis:100%;border-top:1px solid var(--hair);padding-top:10px"><span class="exp-lbl" style="margin-right:2px">Rubro</span>
-    ${[...Object.entries(RUBROS),['todo','Todo']].map(([k,l])=>`<button class="mfil" type="button" data-vrubro="${k}" aria-pressed="${vRubro===k}">${l} <span class="num">${k==='todo'?nRub:(R[k]||0)}</span></button>`).join('')}
-    <span style="width:1px;background:var(--hair);margin:0 4px;align-self:stretch"></span>${regionSel(G)}</div>`;
-  const tipoBar=vRubro!=='consultoria'?'':`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-basis:100%;border-top:1px solid var(--hair);padding-top:10px"><span class="exp-lbl" style="margin-right:2px">Tipo de consultoría</span>
-    <button class="mfil" type="button" data-vtipo="" aria-pressed="${!vTipos.size}">Todos</button>${
-    [...VTIPOS.map(x=>[x[0],x[1]]),VTIPO_OTRO].map(([k,l])=>`<button class="mfil" type="button" data-vtipo="${k}" aria-pressed="${vTipos.has(k)}">${l} <span class="num">${T[k]||0}</span></button>`).join('')}
-    <span class="sub" style="font-size:11.5px">Puedes marcar varios.</span></div>`;
+  const rubBar=`<div class="vsec"><div class="vsec-h"><span class="vsec-t">Rubro</span>${regionSel(G)}</div><div class="vrub">
+    ${[...Object.entries(RUBROS),['todo','Todo']].map(([k,l])=>{ const [c,s]=RUB_COL[k], on=vRubro===k, n=k==='todo'?nRub:(R[k]||0);
+      return `<button type="button" class="vrt" data-vrubro="${k}" aria-pressed="${on}" style="--c:${c};--s:${s}"><span class="vrt-i"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RUB_ICO[k]}</svg></span><span class="vrt-x"><span class="vrt-l">${l}</span><span class="vrt-n">${n.toLocaleString('en-US')}</span></span></button>`; }).join('')}</div></div>`;
+  const tipoBar=vRubro!=='consultoria'?'':`<div class="vsec vsec-tipo"><div class="vsec-h"><span class="vsec-t">Tipo de consultoría</span><span class="sub" style="font-size:11.5px">Puedes marcar varios</span></div><div class="vchips">
+    <button class="vch" type="button" data-vtipo="" aria-pressed="${!vTipos.size}">Todos</button>${
+    [...VTIPOS.map(x=>[x[0],x[1]]),VTIPO_OTRO].map(([k,l])=>`<button class="vch" type="button" data-vtipo="${k}" aria-pressed="${vTipos.has(k)}">${l} <span class="vch-n">${T[k]||0}</span></button>`).join('')}</div></div>`;
   const ordBar=`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex-basis:100%;border-top:1px solid var(--hair);padding-top:10px">
     <a href="#" data-seaceayuda class="sub" style="font-size:11.5px;color:var(--inst)">¿Cómo abrir la convocatoria en el SEACE?</a>
     <label class="exp-lbl" for="vord" style="margin-left:auto">Ordenar por</label><select class="sl" id="vord" style="width:auto">${[['pub','Más recientes'],['cierre','Plazo por cerrar'],['valor','Mayor valor referencial']].map(([k,l])=>`<option value="${k}"${k===vOrd?' selected':''}>${l}</option>`).join('')}</select></div>`;
@@ -2855,8 +2882,8 @@ function pintarBandeja(cn,rows){
 /* Selector de regiones (departamentos), con conteo; se recuerda en este equipo y siempre se ve cuál está activo */
 function regionSel(G){ const lista=[...new Set([...Object.keys(G),...vRegiones])].sort((a,b)=>(a===''?1:b===''?-1:a.localeCompare(b)));
   const lbl=vRegiones.size?(vRegiones.size<=3?[...vRegiones].map(regBonito).join(', '):vRegiones.size+' regiones'):'Todas';
-  return `<div style="position:relative"><button class="mfil" type="button" data-vregbtn aria-expanded="${vRegAbierto}" aria-pressed="${vRegiones.size>0}">Región: ${esc(lbl)} ▾</button>
-    ${vRegAbierto?`<div style="position:absolute;z-index:50;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--hair);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;width:330px;max-height:360px;overflow:auto">
+  return `<div style="position:relative"><button class="vreg" type="button" data-vregbtn aria-expanded="${vRegAbierto}" aria-pressed="${vRegiones.size>0}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.3-6-11a6 6 0 0 1 12 0c0 5.7-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg> Región: <b>${esc(lbl)}</b> <span aria-hidden="true">▾</span></button>
+    ${vRegAbierto?`<div style="position:absolute;z-index:50;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--hair);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;width:330px;max-height:360px;overflow:auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:12.5px">Regiones</b><span><button class="addmini" type="button" data-vregtodas style="margin:0">Todas</button> <button class="addmini" type="button" data-vregcerrar style="margin:0">Listo</button></span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:12.5px">${lista.map(r=>`<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" data-vreg="${esc(r)}" ${vRegiones.has(r)?'checked':''}> ${esc(regBonito(r))} <span class="num" style="color:var(--muted)">${G[r]||0}</span></label>`).join('')||'<span class="sub">Sin datos de región.</span>'}</div></div>`:''}</div>`; }
 el('modLic').addEventListener('change',ev=>{ const t=ev.target;
