@@ -389,6 +389,9 @@
   #modMkt .panel-h{background:var(--purple-soft);color:var(--purple)}
   #modEmp .panel-h{background:var(--slate-soft);color:var(--slate)}
   #modGestion .panel-h{background:var(--gold-soft);color:color-mix(in srgb,var(--gold) 80%,#000)}
+.vacc{display:flex;flex-direction:column;gap:4px;width:112px}
+.vacc .tbtn,.vacc a.tbtn{width:100%;box-sizing:border-box;justify-content:center;text-align:center;padding:5px 6px;font-size:12px;margin:0}
+.vacc .del{align-self:center}
 </style>
 </head>
 <body>
@@ -2844,7 +2847,7 @@ function pintarBandeja(cn,rows){
       <td class="l" style="min-width:150px">${esc(x.entidad)}<div style="color:var(--muted);font-size:11.5px">${esc(x.region?regBonito(x.region):'')}</div><span class="chip" title="${esc(vigFuente(x.ocid))}" style="background:var(--slate-soft);color:var(--slate);margin-top:3px;display:inline-block">SEACE</span></td>
       <td class="num" style="white-space:nowrap;${x.valor?'font-weight:600':''}">${x.valor?f.format(x.valor):(esCM(x.ocid)?'<span title="Los contratos menores no publican monto; por ley son de hasta 8 UIT">Hasta 8 UIT</span>':'<span style="color:var(--muted)" title="Monto reservado: con la Ley 32069 no es obligatorio publicar la cuantía durante la selección (Reglamento, art. 53.4). A veces figura en las bases; si no, se conoce al otorgar la buena pro.">Reservado</span>')}</td>
       <td class="l" style="min-width:175px">${cronoHTML(x,dd)}</td>
-      <td class="l"><div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:flex-end;width:200px">${fid?`<button class="tbtn" type="button" data-lact="open" data-id="${esc(fid)}">Ver ficha</button>`:`<button class="tbtn" type="button" data-vact="eval" data-ocid="${esc(x.ocid)}" style="background:var(--inst);color:#fff;border-color:var(--inst)">Evaluar</button>`}
+      <td class="l" style="width:118px;padding-right:10px"><div class="vacc">${fid?`<button class="tbtn" type="button" data-lact="open" data-id="${esc(fid)}">Ver ficha</button>`:`<button class="tbtn" type="button" data-vact="eval" data-ocid="${esc(x.ocid)}" style="background:var(--inst);color:#fff;border-color:var(--inst)">Evaluar</button>`}
         ${enlacesProceso(x.ocid,x.nomenclatura,x.bases,x.entidad,x.metodo)}
         ${fid?'':`<button class="del" type="button" data-vact="desc" data-ocid="${esc(x.ocid)}" title="Descartar" aria-label="Descartar">×</button>`}</div></td></tr>`; }).join('')}</tbody></table></div>
     ${rows.length<n?`<div style="padding:10px 14px"><button class="addmini" type="button" data-vact="more">Mostrar más (${(n-rows.length).toLocaleString('en-US')} restantes)</button></div>`:''}</div>`;
