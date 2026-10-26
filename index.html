@@ -2501,7 +2501,9 @@ function renderLDet(){
           <div class="xf"><label>Región</label><input class="txt" ${a} data-f="region" value="${esc(p.region)}"></div>
           <div class="xf"><label>Fuente</label><input class="txt" ${a} data-f="fuente" value="${esc(p.fuente)}"></div>
           <div class="xf w2"><label>Ficha del proceso</label>${urlField(a+' data-f="enlaceFicha"',p.enlaceFicha||vigFichaUrl(p.ocid),'a la ficha del proceso')}${p.ocid?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${enlacesProceso(p.ocid,p.nomenclatura,'',p.entidad,'')}</div>`:''}</div>
-          <div class="xf w2"><label>Bases</label>${urlField(a+' data-f="enlaceBases"',p.enlaceBases,'a las bases')}</div>
+          <div class="xf w2">${(esCM(p.ocid)||/^CM-/i.test(p.nomenclatura||''))?`<label>Términos de referencia (TDR)</label>${urlField(a+' data-f="enlaceBases"',p.enlaceBases,'a los términos de referencia')}
+            <div class="sub" style="font-size:12px;margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--gold-soft);color:var(--ink)">En los contratos menores el buscador público del SEACE no publica los TDR. Se obtienen desde el SEACE con usuario de proveedor (RNP) o pidiéndolos al área usuaria de la entidad. Cuando los tenga, guárdelos (Drive u otro) y pegue aquí el enlace.</div>`
+            :`<label>Bases</label>${urlField(a+' data-f="enlaceBases"',p.enlaceBases,'a las bases')}`}</div>
         </div></div></div>
         <div class="panel"><div class="panel-h">Fechas clave</div><div class="panel-b"><div class="xgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">${fechas}</div>
           <div id="lcd" style="margin-top:10px"></div></div></div>
@@ -2690,6 +2692,30 @@ function vigiaAyuda(){ let box=el('vigiaBox'); if(!box){ box=document.createElem
     <div style="margin-top:6px;color:var(--muted)">La ventana de Wasichiq que se abre debe tener la sesión iniciada. No cierres las pestañas hasta que diga «Listo».</div>`; }
 document.addEventListener('click',ev=>{ const y=ev.target.closest('[data-vigiaayuda]'); if(y){ ev.preventDefault(); vigiaAyuda(); return; }
   const bx=el('vigiaBox'); if(bx&&!bx.contains(ev.target)) bx.remove(); });
+/* Bases de las convocatorias marcadas con la estrella: lista con enlace de descarga y opción de abrirlas todas */
+async function vigBasesMarcadas(){ const ocids=[...(lic.interesantes||[])]; let box=el('basesBox');
+  if(!box){ box=document.createElement('div'); box.id='basesBox'; box.setAttribute('role','dialog');
+    box.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9000;background:#fff;border:1px solid var(--hair);border-left:5px solid var(--gold);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:14px 16px;width:min(460px,calc(100vw - 36px));max-height:70vh;overflow:auto;font-size:13px;line-height:1.45';
+    document.body.appendChild(box);
+    box.addEventListener('click',e=>{ if(e.target.closest('[data-cerrar]')){ box.remove(); return; }
+      if(e.target.closest('[data-todas]')){ const ls=[...box.querySelectorAll('a[data-bl]')]; let bloq=0;
+        ls.forEach((a,i)=>setTimeout(()=>{ const w=window.open(a.href,'_blank','noopener'); if(!w) bloq++; if(i===ls.length-1&&bloq) box.querySelector('[data-aviso]').textContent='Chrome bloqueó '+bloq+' ventana(s): pulse el ícono de ventanas bloqueadas en la barra de direcciones, elija «Permitir siempre» y vuelva a intentar, o use los enlaces de uno en uno.'; },i*700)); } }); }
+  box.innerHTML='<div style="color:var(--muted)">Buscando las bases…</div>';
+  const fichas=new Map(lic.procesos.filter(p=>p.ocid).map(p=>[p.ocid,p]));
+  let rows=[]; try{ rows=(await vigApi.porOcid(ocids)).map(vigDesdeFila); }catch(e){}
+  const m=new Map(rows.map(x=>[x.ocid,x]));
+  const it=ocids.map(o=>{ const x=m.get(o)||vigCache.get(o)||{}, f=fichas.get(o); const url=(f&&f.enlaceBases)||(esCM(o)?'':x.bases)||'';
+    return {o,nom:(f&&f.nomenclatura)||x.nomenclatura||o,obj:(f&&f.objeto)||x.objeto||'',url,cm:esCM(o)}; });
+  const con=it.filter(x=>x.url);
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><b style="color:var(--gold)">Bases de las convocatorias marcadas (${it.length})</b><button class="del" type="button" data-cerrar aria-label="Cerrar">×</button></div>
+    <div style="margin:4px 0 8px;color:var(--muted)">Cada enlace descarga el archivo oficial del SEACE en su carpeta de Descargas.</div>
+    ${con.length>1?`<button class="tbtn" type="button" data-todas style="background:var(--gold);color:#fff;border-color:var(--gold);margin-bottom:8px">↓ Descargar todas (${con.length})</button>`:''}
+    <div data-aviso style="color:var(--red);font-size:12px;margin-bottom:6px"></div>
+    ${it.map(x=>`<div style="padding:7px 0;border-top:1px solid var(--hair)"><div class="num" style="font-size:11.5px;color:var(--muted)">${esc(x.nom)}</div><div style="margin:2px 0 4px">${esc(String(x.obj).slice(0,140))}${String(x.obj).length>140?'…':''}</div>${
+      x.url?`<a data-bl href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener" style="color:var(--inst);font-weight:600">↓ Descargar ${x.cm?'TDR':'bases'}</a>`
+      :`<span style="color:var(--muted);font-size:12px">${x.cm?'Contrato menor: el SEACE no publica los TDR; pídalos a la entidad y pegue el enlace en la ficha.':'Sin enlace a las bases todavía (puede aparecer en la próxima actualización del Vigía).'}</span>`}</div>`).join('')}`; }
+document.addEventListener('click',ev=>{ if(ev.target.closest('[data-vbases]')){ ev.preventDefault(); vigBasesMarcadas(); return; }
+  const bx=el('basesBox'); if(bx&&!bx.contains(ev.target)) bx.remove(); });
 function seaceAyuda(href){ let box=el('seaceBox'); if(!box){ box=document.createElement('div'); box.id='seaceBox'; box.setAttribute('role','dialog');
     box.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9000;background:#fff;border:1px solid var(--hair);border-left:5px solid var(--inst);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:14px 16px;max-width:400px;font-size:13px;line-height:1.5';
     document.body.appendChild(box); box.addEventListener('click',e=>{ if(e.target.closest('[data-cerrar]')) box.remove(); if(e.target.closest('[data-bmok]')){ try{ localStorage.setItem('wasichiq-seace-bm','1'); }catch(_){} box.remove(); }
@@ -2906,7 +2932,7 @@ function pintarBandeja(cn,rows){
   const head=`<div class="panel"><div class="panel-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
     <div style="font-size:13px;flex:1 1 520px">${vigFuentesHTML()}<div style="margin-top:6px;color:var(--muted);font-size:12px">${(cn.en_bandeja||0).toLocaleString('en-US')} convocatorias en la bandeja (consultorías, obras y servicios de los últimos ${VIG_DIAS} días)</div></div><button class="tbtn" type="button" data-vigiaayuda style="background:var(--gold);color:#fff;border-color:var(--gold);flex:none">↻ Actualizar con el Vigía</button>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="mfil" type="button" data-vab="1" aria-pressed="${vAb}" title="Concursos con consultas abiertas y contratos menores con cotización abierta">Plazo abierto (${cn.abiertas||0})</button><button class="mfil" type="button" data-vab="0" aria-pressed="${!vAb}" title="Incluye las que ya tienen el plazo cerrado">Todos los plazos (${cn.total||0})</button>
-    <button class="mfil" type="button" data-vint aria-pressed="${vInt}" title="Solo las que marcaste con la estrella" style="${vInt?'':'color:var(--gold);border-color:var(--gold)'}">★ Interesantes (${cn.interesantes||0})</button>
+    <button class="mfil" type="button" data-vint aria-pressed="${vInt}" title="Solo las que marcaste con la estrella" style="${vInt?'':'color:var(--gold);border-color:var(--gold)'}">★ Interesantes (${cn.interesantes||0})</button>${(cn.interesantes||0)>0?`<button class="mfil" type="button" data-vbases title="Bases de todas las convocatorias marcadas con la estrella" style="color:var(--gold);border-color:var(--gold)">↓ Bases de las marcadas</button>`:''}
     <span style="width:1px;background:var(--hair);margin:0 4px"></span><button class="mfil" type="button" data-vrel="0" aria-pressed="${!vRel}">Cualquier especialidad</button>
     <button class="mfil" type="button" data-vrel="1" aria-pressed="${vRel}" ${mias.length?'':'disabled title="Carga experiencia o socios para usar este filtro"'}>Relacionadas con nuestra experiencia</button></div>${rubBar}${tipoBar}${ordBar}</div></div>`;
   const n=cn.mostradas||0, hayF=!!q||vRel||vTipos.size>0||vInt||vRegiones.size>0;
