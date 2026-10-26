@@ -2658,9 +2658,14 @@ function seaceDatos(nom,ent,met){ const t=String(nom||'').split('-'); const iy=t
   const nro=iy>0?t[iy-1]:'', anio=iy>=0?t[iy]:'', pre=iy>1?t.slice(0,iy-1).join('-'):'';
   return {tipo:met||SEACE_TIPOS[pre]||pre, nro, anio, entidad:ent||'', nom:nom||''}; }
 const seaceId=o=>{ const m=/seacev3-(\d+)$/.exec(String(o||'')); return m?m[1]:''; };
+/* TDR de un contrato menor: el SEACE no los publica; si ya se pegó el enlace en la ficha se abre, si no se explica dónde conseguirlos */
+function tdrBtn(ocid){ const f=lic.procesos.find(p=>p.ocid===ocid), u=f&&f.enlaceBases&&safeUrl(f.enlaceBases);
+  return u?`<a class="tbtn" href="${esc(u)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Términos de referencia guardados en la ficha">TDR ↗</a>`
+    :`<button class="tbtn" type="button" data-tdrinfo style="color:var(--muted)" title="El SEACE no publica los TDR de los contratos menores">TDR ?</button>`; }
+document.addEventListener('click',ev=>{ if(ev.target.closest('[data-tdrinfo]')) alert('Términos de referencia (TDR) de contratos menores\n\nEl buscador público del SEACE no los publica. Se obtienen desde el SEACE con usuario de proveedor (RNP) o pidiéndolos al área usuaria de la entidad.\n\nCuando los tenga, pulse «Evaluar» o «Ver ficha» y pegue el enlace en el campo «Términos de referencia (TDR)»: este botón pasará a abrirlos.'); });
 function enlacesProceso(ocid,nom,bases,ent,met){ if(!ocid) return '';
   if(esCM(ocid)) return `<a class="tbtn" href="${esc('https://prod6.seace.gob.pe/buscador-publico/contrataciones#wsq='+encodeURIComponent(JSON.stringify({nom:nom||''})))}" target="_blank" rel="noopener" data-seacelink style="text-decoration:none;display:inline-block" title="Abre el buscador de contratos menores; con el marcador «Wasichiq → SEACE» queda filtrado en este contrato">SEACE ↗</a>`+
-    `<a class="tbtn" href="${esc(vigFichaUrl(ocid))}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Abre directo el detalle del contrato menor">Ficha ↗</a>`;
+    `<a class="tbtn" href="${esc(vigFichaUrl(ocid))}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Abre directo el detalle del contrato menor">Ficha ↗</a>`+tdrBtn(ocid);
   const d=seaceDatos(nom,ent,met); d.id=seaceId(ocid);
   return `<a class="tbtn" href="${esc(SEACE_BUSCADOR+'#wsq='+encodeURIComponent(JSON.stringify(d)))}" target="_blank" rel="noopener" data-seacelink style="text-decoration:none;display:inline-block" title="Abre el buscador del SEACE; con el marcador «Wasichiq → SEACE» se llena solo">SEACE ↗</a>`+
     `<a class="tbtn" href="${esc(vigFichaUrl(ocid))}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Ficha completa del proceso en el portal del OECE: cronograma, documentos y adjudicación">OECE ↗</a>`+
