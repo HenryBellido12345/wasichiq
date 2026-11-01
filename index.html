@@ -564,10 +564,10 @@
     </div>
     <div id="xmsg"></div>
     <div class="panel">
-      <div class="panel-h">Facturación acumulada por especialidad · montos con IGV · parte de Wasichiq</div>
+      <div class="panel-h">Experiencia de la empresa por rubro · montos con IGV · parte de Wasichiq</div>
       <div class="panel-b">
         <div class="specs" id="xspecs"></div>
-        <p class="sub" style="max-width:none;font-size:12px;margin-top:10px">En los contratos ejecutados en consorcio se cuenta solo el porcentaje de participación de Wasichiq. «Acreditable» suma solo los contratos que tienen el enlace a su constancia de conformidad: es lo que se podrá presentar en una oferta.</p>
+        <p class="sub" style="max-width:none;font-size:12px;margin-top:10px">En los contratos ejecutados en consorcio se cuenta solo el porcentaje de participación de Wasichiq. «Acreditable» suma solo los contratos que tienen el enlace al contrato y a su conformidad: es lo que se podrá presentar en una oferta.</p>
       </div>
     </div>
     <div id="xcontratos"></div>
@@ -1901,7 +1901,7 @@ function expNorm(d){
   const arr=v=>Array.isArray(v)?v:[];
   return {
     contratos:arr(d.contratos).map(c=>({id:s(c.id)||eid(),entidad:s(c.entidad),objeto:s(c.objeto),numero:s(c.numero),
-      especialidad:s(c.especialidad),tipo:s(c.tipo),monto:+c.monto||0,inicio:s(c.inicio),fin:s(c.fin),enlace:s(c.enlace),
+      especialidad:s(c.especialidad),tipo:s(c.tipo),monto:+c.monto||0,inicio:s(c.inicio),fin:s(c.fin),enlace:s(c.enlace),enlaceContrato:s(c.enlaceContrato),
       consorcio:!!c.consorcio,participacion:(c.participacion===undefined||c.participacion===null||c.participacion==='')?100:Math.max(0,Math.min(100,+c.participacion||0)),socios:s(c.socios),
       origen:c.origen==='gestion'?'gestion':'manual',gestionRef:s(c.gestionRef)})),
     profesionales:arr(d.profesionales).map(p=>({id:s(p.id)||eid(),nombre:s(p.nombre),profesion:s(p.profesion),colegio:s(p.colegio)||'CIP',
@@ -2012,7 +2012,7 @@ function renderHome(){
   el('h_ed').textContent=emp.docs.length; el('h_ev').textContent=emp.docs.filter(docAtencion).length; el('h_es').textContent=emp.docs.filter(d=>!d.enlace).length;
   el('h_xc').textContent=exp.contratos.length;
   el('h_xp').textContent=exp.profesionales.length;
-  el('h_xi').textContent=exp.contratos.filter(c=>!c.enlace).length+exp.profesionales.filter(p=>!p.enlaceCV).length;
+  el('h_xi').textContent=exp.contratos.filter(c=>!c.enlace||!c.enlaceContrato).length+exp.profesionales.filter(p=>!p.enlaceCV).length;
   let venc=0, porCob=0;
   state.consultancies.forEach(c=>c.entregables.forEach(e=>{ const st=entStatus(e,c.contrato&&c.contrato.inicio);
     if(st.k==='vencido') venc++; if(e.facturado&&!e.cobrado) porCob+=(+e.ingreso||0); }));
@@ -2039,19 +2039,32 @@ function renderExpAll(){ fillLists(); renderSpecs(); renderContratos(); renderPL
 function renderXCounts(){ el('xcnt-e').textContent=exp.contratos.length; el('xcnt-p').textContent=exp.profesionales.length; }
 const partOf=c=>c.consorcio?Math.max(0,Math.min(100,+c.participacion||0))/100:1;
 const SPEC_COLORS=['var(--inst)','var(--gold)','var(--purple)','var(--green)','#8A5A00','#3B6EA8'];
+function rubroMatriz(){ const M={}, cols=new Set(), fmt=v=>f.format(v);
+  exp.contratos.forEach(c=>{ const e=(c.especialidad||'').trim()||'Sin especialidad', t=(c.tipo||'').trim()||'Sin tipo', m=(+c.monto||0)*partOf(c);
+    cols.add(t); M[e]=M[e]||{}; M[e][t]=M[e][t]||{t:0,a:0,n:0,s:0}; const x=M[e][t]; x.t+=m; x.n++; if(c.enlace&&c.enlaceContrato){ x.a+=m; } else x.s++; });
+  const orden=[...TIPOS_SERV.filter(t=>cols.has(t)),...[...cols].filter(t=>!TIPOS_SERV.includes(t)).sort()];
+  const filas=Object.keys(M).sort((a,b)=>Object.values(M[b]).reduce((s,x)=>s+x.t,0)-Object.values(M[a]).reduce((s,x)=>s+x.t,0));
+  if(!filas.length) return '';
+  const tc=t=>filas.reduce((s,e)=>s+((M[e][t]||{}).a||0),0);
+  return `<div style="overflow-x:auto;margin-top:14px"><table class="t" style="font-size:12.5px"><thead><tr><th class="l">Especialidad · tipo de servicio →</th>${orden.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Total acreditable</th></tr></thead><tbody>${
+    filas.map(e=>{ const tot=Object.values(M[e]).reduce((s,x)=>s+x.a,0); return `<tr><td class="l"><b>${esc(e)}</b></td>${orden.map(t=>{ const x=M[e][t];
+      return `<td class="num">${x?`<div style="font-weight:600">${fmt(x.a)}</div><div style="font-size:11px;color:var(--muted)">${x.n} contrato(s)${x.s?` · <span style="color:var(--red)">${x.s} sin documentos</span>`:''}</div>`:'<span style="color:var(--muted)">—</span>'}</td>`; }).join('')}<td class="num" style="font-weight:700">${fmt(tot)}</td></tr>`; }).join('')
+  }</tbody><tfoot><tr><td class="l"><b>Total</b></td>${orden.map(t=>`<td class="num" style="font-weight:700">${fmt(tc(t))}</td>`).join('')}<td class="num" style="font-weight:700">${fmt(orden.reduce((s,t)=>s+tc(t),0))}</td></tr></tfoot></table></div>
+    <p class="sub" style="max-width:none;font-size:12px;margin-top:6px">Monto acreditable: solo contratos con el enlace al contrato y a la conformidad (las bases piden ambos documentos), y solo la parte de Wasichiq en los consorcios.</p>`; }
 function renderSpecs(){
   const g={}; let tot=0, acr=0;
   exp.contratos.forEach(c=>{ const k=(c.especialidad||'').trim()||'Sin especialidad'; const m=(+c.monto||0)*partOf(c);
-    g[k]=g[k]||{t:0,a:0,n:0}; g[k].t+=m; g[k].n++; tot+=m; if(c.enlace){ g[k].a+=m; acr+=m; } });
+    g[k]=g[k]||{t:0,a:0,n:0}; g[k].t+=m; g[k].n++; tot+=m; if(c.enlace&&c.enlaceContrato){ g[k].a+=m; acr+=m; } });
   const keys=Object.keys(g).sort((a,b)=>g[b].t-g[a].t);
   if(!keys.length){ el('xspecs').innerHTML='<div class="xempty" style="grid-column:1/-1;padding:8px">Se calculará al registrar contratos.</div>'; return; }
   el('xspecs').innerHTML=`<div class="spec" style="border-top-color:var(--ink)"><div class="sn">Total de la empresa</div><div class="sm">${f.format(tot)}</div><small>${exp.contratos.length} contrato(s) · acreditable ${f.format(acr)}</small></div>`+
-    keys.map((k,i)=>`<div class="spec" style="border-top-color:${SPEC_COLORS[i%SPEC_COLORS.length]}"><div class="sn">${esc(k)}</div><div class="sm">${f.format(g[k].t)}</div><small>${g[k].n} contrato(s) · acreditable ${f.format(g[k].a)}</small></div>`).join('');
+    keys.map((k,i)=>`<div class="spec" style="border-top-color:${SPEC_COLORS[i%SPEC_COLORS.length]}"><div class="sn">${esc(k)}</div><div class="sm">${f.format(g[k].t)}</div><small>${g[k].n} contrato(s) · acreditable ${f.format(g[k].a)}</small></div>`).join('')+`<div style="grid-column:1/-1">${rubroMatriz()}</div>`;
 }
 function cChips(c){
   return (c.origen==='gestion'?'<span class="chip" style="background:var(--gold-soft);color:var(--gold)">Desde ③ Gestión</span>':'<span class="chip" style="background:var(--inst-soft);color:var(--inst)">Manual</span>')+
     (c.consorcio?'<span class="chip" style="background:var(--purple-soft);color:var(--purple)">Consorcio · '+(+c.participacion||0)+'%</span>':'')+
-    (c.enlace?'<span class="chip" style="background:var(--green-soft);color:var(--green)">Con constancia</span>':'<span class="chip" style="background:var(--red-soft);color:var(--red)">Falta constancia</span>');
+    (c.enlaceContrato?'<span class="chip" style="background:var(--green-soft);color:var(--green)">✓ Contrato</span>':'<span class="chip" style="background:var(--red-soft);color:var(--red)">Falta contrato</span>')+
+    (c.enlace?'<span class="chip" style="background:var(--green-soft);color:var(--green)">✓ Conformidad</span>':'<span class="chip" style="background:var(--red-soft);color:var(--red)">Falta conformidad</span>');
 }
 function urlField(attrs,val,label){
   const u=safeUrl(val);
@@ -2081,7 +2094,8 @@ function renderContratos(){
         <div class="xf"><label>Ejecución</label><label class="xck"><input type="checkbox" ${a} data-f="consorcio" ${c.consorcio?'checked':''}>En consorcio</label></div>
         <div class="xf"><label>% de participación</label><input class="txt num" type="number" min="0" max="100" step="0.01" ${a} data-f="participacion" value="${c.participacion}" ${c.consorcio?'':'disabled'} title="Porcentaje de las obligaciones de Wasichiq en el consorcio"></div>
         <div class="xf w2"><label>Integrantes del consorcio</label><input class="txt" ${a} data-f="socios" value="${esc(c.socios)}" placeholder="Empresas socias" ${c.consorcio?'':'disabled'}></div>
-        <div class="xf w4"><label>Constancia de conformidad</label>${urlField(a+' data-f="enlace"',c.enlace,'a la constancia')}</div>
+        <div class="xf w2"><label>Contrato u orden de servicio</label>${urlField(a+' data-f="enlaceContrato"',c.enlaceContrato,'al contrato')}</div>
+        <div class="xf w2"><label>Conformidad o constancia de prestación</label>${urlField(a+' data-f="enlace"',c.enlace,'a la conformidad')}</div>
       </div></div></div>`; }).join('');
 }
 function renderPList(){
@@ -2396,11 +2410,11 @@ function evalProc(p){
   const rows=[]; let expOk=true, expHave=0, expGap=0;
   if(r.expMonto>0){
     const okEsp=c=>!r.expEspecialidad||sameish(c.especialidad,r.expEspecialidad);
-    expHave=exp.contratos.filter(c=>c.enlace&&okEsp(c)).reduce((a,c)=>a+(+c.monto||0)*partOf(c),0);
-    const sinConst=exp.contratos.filter(c=>!c.enlace&&okEsp(c)).reduce((a,c)=>a+(+c.monto||0)*partOf(c),0);
+    expHave=exp.contratos.filter(c=>c.enlace&&c.enlaceContrato&&okEsp(c)).reduce((a,c)=>a+(+c.monto||0)*partOf(c),0);
+    const sinConst=exp.contratos.filter(c=>!(c.enlace&&c.enlaceContrato)&&okEsp(c)).reduce((a,c)=>a+(+c.monto||0)*partOf(c),0);
     expOk=expHave>=r.expMonto; expGap=Math.max(0,r.expMonto-expHave);
     rows.push({req:'Experiencia del postor'+(r.expEspecialidad?' en '+esc(r.expEspecialidad):''),exig:f.format(r.expMonto),
-      tiene:f.format(expHave)+' acreditable'+(sinConst?' (+ '+f.format(sinConst)+' sin constancia)':''),ok:expOk,res:expOk?'Cumple':'Falta '+f.format(expGap)});
+      tiene:f.format(expHave)+' acreditable'+(sinConst?' (+ '+f.format(sinConst)+' sin contrato o conformidad)':''),ok:expOk,res:expOk?'Cumple':'Falta '+f.format(expGap)});
   }
   const cands=exp.profesionales.map(pr=>({pr,calc:profCalc(pr)})), used=new Set(), res={};
   [...reqs].sort((a,b)=>b.anios-a.anios).forEach(x=>{
@@ -3029,7 +3043,7 @@ function renderCk(p){
 let xDocF='falta';
 function docRows(){
   const r=[];
-  exp.contratos.forEach(c=>r.push({tipo:'Constancia de conformidad',de:c.objeto||'(contrato sin objeto)',sub:c.entidad,url:c.enlace,tab:'e',id:c.id}));
+  exp.contratos.forEach(c=>{ r.push({tipo:'Contrato u orden',de:c.objeto||'(contrato sin objeto)',sub:c.entidad,url:c.enlaceContrato,tab:'e',id:c.id}); r.push({tipo:'Conformidad',de:c.objeto||'(contrato sin objeto)',sub:c.entidad,url:c.enlace,tab:'e',id:c.id}); });
   exp.profesionales.forEach(p=>{ const n=p.nombre||'(profesional sin nombre)';
     r.push({tipo:'CV',de:n,sub:p.profesion,url:p.enlaceCV,tab:'p',id:p.id});
     r.push({tipo:'Título y colegiatura',de:n,sub:p.profesion,url:p.enlaceTitulo,tab:'p',id:p.id});
@@ -3153,8 +3167,8 @@ function firma(){
 }
 function anexoExperiencia(p){
   const r=p.req, okEsp=c=>!r.expEspecialidad||sameish(c.especialidad,r.expEspecialidad);
-  let lista=exp.contratos.filter(c=>c.enlace&&okEsp(c)), nota='';
-  if(!lista.length){ lista=exp.contratos.filter(okEsp); if(lista.length) nota='Atención: ninguno de estos contratos tiene registrada su constancia de conformidad en la app.'; }
+  let lista=exp.contratos.filter(c=>c.enlace&&c.enlaceContrato&&okEsp(c)), nota='';
+  if(!lista.length){ lista=exp.contratos.filter(okEsp); if(lista.length) nota='Atención: ninguno de estos contratos tiene registrados en la app su contrato y su conformidad.'; }
   lista=[...lista].sort((a,b)=>(b.fin||'').localeCompare(a.fin||''));
   let tot=0;
   const rows=lista.map((c,i)=>{ const pct=c.consorcio?(+c.participacion||0):100, acr=(+c.monto||0)*pct/100; tot+=acr;
