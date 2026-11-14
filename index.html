@@ -558,7 +558,7 @@
   <section id="xp-e" role="tabpanel" aria-labelledby="xtab-e">
     <div class="exportbar">
       <button class="addbtn" type="button" data-xact="addC">+ Agregar contrato</button>
-      <button class="tbtn" type="button" data-xact="fromG">Traer desde ③ Gestión</button>
+      <button class="tbtn" type="button" data-xact="fromG">Revisar ③ Gestión</button>
       <label class="exp-lbl" for="xq" style="margin-left:auto">Buscar</label>
       <input class="txt" id="xq" type="search" placeholder="Entidad, objeto o especialidad" style="width:240px">
     </div>
@@ -1066,6 +1066,7 @@ function autosave(){
     try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), s:state}));
       const st=document.getElementById('saveStatus'); if(st){const d=new Date(); st.textContent='Guardado ✓ '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
       sbSchedulePush();
+      try{ if(syncGestionExp()&&!el('modExp').classList.contains('hidden')) renderExpAll(); }catch(_){}
     }catch(_){ const st=document.getElementById('saveStatus'); if(st) st.textContent='Autoguardado no disponible'; }
   }, 400);
 }
@@ -1201,6 +1202,7 @@ function renderC(){
         <span class="csum"><span>Ing. neto <b id="ci_${ci}">—</b></span><span>Costo neto <b id="ck_${ci}">—</b></span><span title="IGV de compras recuperable como crédito fiscal">IGV créd. <b id="cg_${ci}">—</b></span><span>Margen <b class="pos" id="cm_${ci}">—</b></span></span>
         <button class="del" data-act="delC" data-c="${ci}" title="Eliminar consultoría">×</button>
       </div>
+      <div class="sub" style="font-size:11.5px;padding:4px 14px 0">${gestionLista(c)?'<span style="color:var(--green);font-weight:600">✓ En ② Experiencia</span> · todos los entregables tienen conformidad':'Pasará sola a ② Experiencia cuando todos sus entregables tengan fecha de conformidad'}</div>
       <div class="ccard-b">
         <div class="cmeta" style="border-bottom:1px dotted var(--hair);margin-bottom:10px;padding-bottom:10px">
           <div class="mf"><label>Contrato N°</label><input class="cnum" data-c="${ci}" data-f="contrato.numero" value="${esc(ct.numero||'')}" placeholder="—"></div>
@@ -2035,7 +2037,7 @@ function fillLists(){
   el('dl-esp').innerHTML=opt(espSet); el('dl-tipo').innerHTML=opt(TIPOS_SERV);
   el('dl-cargo').innerHTML=opt(cargoSet); el('dl-colegio').innerHTML=opt(COLEGIOS);
 }
-function renderExpAll(){ fillLists(); renderSpecs(); renderContratos(); renderPList(); renderPDet(); renderXCounts(); renderDocs(); }
+function renderExpAll(){ syncGestionExp(); fillLists(); renderSpecs(); renderContratos(); renderPList(); renderPDet(); renderXCounts(); renderDocs(); }
 function renderXCounts(){ el('xcnt-e').textContent=exp.contratos.length; el('xcnt-p').textContent=exp.profesionales.length; }
 const partOf=c=>c.consorcio?Math.max(0,Math.min(100,+c.participacion||0))/100:1;
 const SPEC_COLORS=['var(--inst)','var(--gold)','var(--purple)','var(--green)','#8A5A00','#3B6EA8'];
@@ -2061,7 +2063,7 @@ function renderSpecs(){
     keys.map((k,i)=>`<div class="spec" style="border-top-color:${SPEC_COLORS[i%SPEC_COLORS.length]}"><div class="sn">${esc(k)}</div><div class="sm">${f.format(g[k].t)}</div><small>${g[k].n} contrato(s) · acreditable ${f.format(g[k].a)}</small></div>`).join('')+`<div style="grid-column:1/-1">${rubroMatriz()}</div>`;
 }
 function cChips(c){
-  return (c.origen==='gestion'?'<span class="chip" style="background:var(--gold-soft);color:var(--gold)">Desde ③ Gestión</span>':'<span class="chip" style="background:var(--inst-soft);color:var(--inst)">Manual</span>')+
+  return (c.origen==='gestion'?'<span class="chip" style="background:var(--gold-soft);color:var(--gold)">Desde ③ Gestión</span>':'<span class="chip" style="background:var(--inst-soft);color:var(--inst)">Histórico</span>')+
     (c.consorcio?'<span class="chip" style="background:var(--purple-soft);color:var(--purple)">Consorcio · '+(+c.participacion||0)+'%</span>':'')+
     (c.enlaceContrato?'<span class="chip" style="background:var(--green-soft);color:var(--green)">✓ Contrato</span>':'<span class="chip" style="background:var(--red-soft);color:var(--red)">Falta contrato</span>')+
     (c.enlace?'<span class="chip" style="background:var(--green-soft);color:var(--green)">✓ Conformidad</span>':'<span class="chip" style="background:var(--red-soft);color:var(--red)">Falta conformidad</span>');
@@ -2076,21 +2078,21 @@ function renderContratos(){
   if(!exp.contratos.length){ el('xcontratos').innerHTML='<div class="panel"><div class="xempty">Aún no hay contratos. Usa «+ Agregar contrato» o «Traer desde ③ Gestión».</div></div>'; return; }
   const list=exp.contratos.filter(c=>!q||[c.entidad,c.objeto,c.especialidad,c.tipo,c.numero].join(' ').toLowerCase().includes(q));
   if(!list.length){ el('xcontratos').innerHTML='<div class="panel"><div class="xempty">Ningún contrato coincide con la búsqueda.</div></div>'; return; }
-  el('xcontratos').innerHTML=list.map(c=>{ const a=`data-xc="${esc(c.id)}"`;
+  el('xcontratos').innerHTML=list.map(c=>{ const a=`data-xc="${esc(c.id)}"`, g=c.origen==='gestion', ro=g?' readonly title="Se edita en ③ Gestión de consultorías"':'';
     return `<div class="ccard" id="cc-${esc(c.id)}">
       <div class="ccard-h">
-        <input class="cname" ${a} data-f="objeto" value="${esc(c.objeto)}" placeholder="Objeto del contrato (como figura en el contrato)" aria-label="Objeto del contrato">
+        <input class="cname" ${a} data-f="objeto" value="${esc(c.objeto)}"${ro} placeholder="Objeto del contrato (como figura en el contrato)" aria-label="Objeto del contrato">
         <span class="xchips" style="display:flex;gap:6px;flex-wrap:wrap">${cChips(c)}</span>
         <button class="del" type="button" data-xact="delC" data-id="${esc(c.id)}" title="Quitar contrato" aria-label="Quitar contrato" style="margin-left:auto">×</button>
       </div>
-      <div class="ccard-b"><div class="xgrid" style="margin-top:8px">
-        <div class="xf w2"><label>Entidad contratante</label><input class="txt" ${a} data-f="entidad" value="${esc(c.entidad)}" placeholder="Entidad o empresa"></div>
-        <div class="xf"><label>N° de contrato u orden</label><input class="txt" ${a} data-f="numero" value="${esc(c.numero)}"></div>
-        <div class="xf"><label>Monto (con IGV)</label><div class="cell"><span class="pp">S/</span><input type="text" inputmode="decimal" class="money-inp" ${a} data-f="monto" value="${fmtMoney(c.monto)}"></div></div>
+      <div class="ccard-b">${g?'<div class="sub" style="font-size:12px;margin-top:6px;padding:6px 10px;border-radius:8px;background:var(--gold-soft)">Viene de ③ Gestión de consultorías: entidad, objeto, número, monto y fechas se actualizan desde allá. Aquí se completan la especialidad, el tipo de servicio, el consorcio y los enlaces.</div>':''}<div class="xgrid" style="margin-top:8px">
+        <div class="xf w2"><label>Entidad contratante</label><input class="txt" ${a} data-f="entidad" value="${esc(c.entidad)}"${ro} placeholder="Entidad o empresa"></div>
+        <div class="xf"><label>N° de contrato u orden</label><input class="txt" ${a} data-f="numero" value="${esc(c.numero)}"${ro}></div>
+        <div class="xf"><label>Monto (con IGV)</label><div class="cell"><span class="pp">S/</span><input type="text" inputmode="decimal" class="money-inp" ${a} data-f="monto" value="${fmtMoney(c.monto)}"${ro}></div></div>
         <div class="xf"><label>Especialidad</label><input class="txt" list="dl-esp" ${a} data-f="especialidad" value="${esc(c.especialidad)}" placeholder="Elegir o escribir"></div>
         <div class="xf"><label>Tipo de servicio</label><input class="txt" list="dl-tipo" ${a} data-f="tipo" value="${esc(c.tipo)}" placeholder="Elegir o escribir"></div>
-        <div class="xf"><label>Inicio</label><input class="txt" type="date" ${a} data-f="inicio" value="${esc(c.inicio)}"></div>
-        <div class="xf"><label>Fin / conformidad</label><input class="txt" type="date" ${a} data-f="fin" value="${esc(c.fin)}"></div>
+        <div class="xf"><label>Inicio</label><input class="txt" type="date" ${a} data-f="inicio" value="${esc(c.inicio)}"${ro}></div>
+        <div class="xf"><label>Fin / conformidad</label><input class="txt" type="date" ${a} data-f="fin" value="${esc(c.fin)}"${ro}></div>
         <div class="xf"><label>Ejecución</label><label class="xck"><input type="checkbox" ${a} data-f="consorcio" ${c.consorcio?'checked':''}>En consorcio</label></div>
         <div class="xf"><label>% de participación</label><input class="txt num" type="number" min="0" max="100" step="0.01" ${a} data-f="participacion" value="${c.participacion}" ${c.consorcio?'':'disabled'} title="Porcentaje de las obligaciones de Wasichiq en el consorcio"></div>
         <div class="xf w2"><label>Integrantes del consorcio</label><input class="txt" ${a} data-f="socios" value="${esc(c.socios)}" placeholder="Empresas socias" ${c.consorcio?'':'disabled'}></div>
@@ -2197,19 +2199,28 @@ function setX(t){
     if(t==='xtab-d') renderDocs();
   }));
 })();
+/* Flujo de la información: todo contrato nace en ③ Gestión; cuando todos sus entregables tienen conformidad,
+   pasa solo a ② Experiencia y se mantiene igual a ③ (entidad, objeto, número, monto y fechas se editan en ③).
+   Especialidad, tipo, consorcio y enlaces se completan en ②; un enlace vacío en ③ no borra el de ②. */
+function gestionLista(c){ const e=c.entregables||[]; return e.length>0&&e.every(x=>parseD(x.conformidad)); }
+function syncGestionExp(){
+  if(typeof state==='undefined'||!state||!Array.isArray(state.consultancies)||!exp) return false;
+  let cambio=false; const porRef=new Map(exp.contratos.filter(c=>c.gestionRef).map(c=>[c.gestionRef,c]));
+  state.consultancies.forEach(c=>{ if(!gestionLista(c)) return;
+    const ref=String(c.id), ct=c.contrato||{}, ents=c.entregables, fin=ents.map(e=>e.conformidad).sort().pop(), ult=ents.find(e=>e.conformidad===fin)||ents[ents.length-1];
+    const fijo={entidad:c.cliente||'',objeto:c.nombre||'',numero:ct.numero||'',monto:+ct.monto||0,inicio:ct.inicio||'',fin};
+    const enl={enlaceContrato:ct.enlace||'',enlace:(ult&&ult.enlaceAprob)||''};
+    let x=porRef.get(ref);
+    if(!x){ x=expNorm({contratos:[{...fijo,...enl,especialidad:c.especialidad||'',tipo:c.tipo||'',origen:'gestion',gestionRef:ref}]}).contratos[0]; exp.contratos.unshift(x); cambio=true; return; }
+    for(const k in fijo) if(String(x[k]??'')!==String(fijo[k])){ x[k]=fijo[k]; cambio=true; }
+    for(const k in enl) if(enl[k]&&x[k]!==enl[k]){ x[k]=enl[k]; cambio=true; }
+  });
+  if(cambio) expSave(); return cambio; }
 function fromGestion(){
-  const done=new Set(exp.contratos.filter(c=>c.gestionRef).map(c=>c.gestionRef));
-  const listas=state.consultancies.filter(c=>c.entregables.length&&c.entregables.every(e=>parseD(e.conformidad)));
-  let n=0;
-  listas.forEach(c=>{ const ref=String(c.id); if(done.has(ref)) return;
-    const fin=c.entregables.map(e=>e.conformidad).sort().pop();
-    exp.contratos.unshift(expNorm({contratos:[{entidad:c.cliente,objeto:c.nombre,numero:c.contrato&&c.contrato.numero,
-      monto:c.contrato&&c.contrato.monto,inicio:c.contrato&&c.contrato.inicio,fin,origen:'gestion',gestionRef:ref}]}).contratos[0]); n++; });
-  const pend=state.consultancies.length-listas.length;
-  xMsg=(n?`Se agregaron ${n} contrato(s) desde ③ Gestión. Completa su especialidad, tipo de servicio y el enlace a la constancia.`
-          :'No hay consultorías nuevas con conformidad final en ③ Gestión.')+
-       (pend>0?` ${pend} consultoría(s) aún no tienen conformidad en todos sus entregables, por eso no se trajeron.`:'');
-  if(n) expSave();
+  const antes=exp.contratos.filter(c=>c.gestionRef).length; syncGestionExp();
+  const n=exp.contratos.filter(c=>c.gestionRef).length-antes, pend=state.consultancies.filter(c=>!gestionLista(c)).length;
+  xMsg=(n?`Pasaron ${n} contrato(s) desde ③ Gestión. Complete su especialidad, tipo de servicio y enlaces.`:'Los contratos de ③ Gestión con conformidad ya están en ② (pasan solos).')+
+       (pend>0?` ${pend} consultoría(s) de ③ aún no tienen conformidad en todos sus entregables: pasarán cuando la tengan.`:'');
   el('xq').value=''; renderExpAll();
 }
 
@@ -2621,7 +2632,7 @@ function setL(t){
       if(p.gestionRef) return;
       if(!confirm('¿Marcar como ganada y crear la consultoría en ③ Gestión?')) return;
       const id=nid();
-      state.consultancies.push({id,nombre:p.objeto||'Consultoría ganada',cliente:p.entidad||'',contrato:{numero:'',inicio:'',dias:'',monto:p.oferta||p.valorRef||0,enlace:''},
+      state.consultancies.push({id,nombre:p.objeto||'Consultoría ganada',cliente:p.entidad||'',especialidad:p.especialidad||'',tipo:p.tipo||'',licRef:p.id,contrato:{numero:'',inicio:'',dias:'',monto:p.oferta||p.valorRef||0,enlace:''},
         entregables:[{id:nid(),desc:'',mes:'',ingreso:0,fechaInicio:'',diasEntrega:'',fechaEnt:'',conformidad:'',fechaFactura:'',enlaceEnt:'',enlaceAprob:'',facturado:false,cobrado:false,observaciones:[]}],costos:[]});
       renderC(); renderPlazos(); paint();
       p.gestionRef=String(id); p.etapa='ganada'; licSave(); renderLDet();
